@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>FDE Wizard Compositor</title>
+<style>
+  @font-face { font-family: 'Gmarket'; src: url('GmarketSans-Bold.woff2') format('woff2'); font-weight: 700; }
+  @font-face { font-family: 'Gmarket'; src: url('GmarketSans-Medium.woff2') format('woff2'); font-weight: 500; }
+  @font-face { font-family: 'SUIT'; src: url('SUIT-Variable.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'JBM'; src: url('JetBrainsMono-500.woff2') format('woff2'); }
+  @font-face { font-family: 'Pretendard'; src: url('Pretendard-SemiBold.woff2') format('woff2'); font-weight: 600; }
+  :root { --navy: #0B1D3F; --yellow: #FFD23F; --cream: #EEE6D9; --ink: #14213D; }
+  html, body { margin: 0; background: #000; }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--cream);
+           font-family: 'SUIT', sans-serif; }
+  .layer { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .hide { display: none !important; }
+  #vignette { position: absolute; inset: 0; pointer-events: none;
+              background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 58%, rgba(40,25,10,.22) 100%); }
+  #scan { position: absolute; left: 0; width: 1920px; height: 6px; background: #7FE3FF;
+          box-shadow: 0 0 18px 6px rgba(127,227,255,.75), 0 0 60px 18px rgba(127,227,255,.35); }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+
+  /* 단계 라벨(레퍼런스 문법: 짙은 알약 + 노란 꼬리표) */
+  #step { position: absolute; left: 52px; top: 44px; height: 70px; padding: 0 30px 0 12px; border-radius: 35px;
+          background: var(--navy); display: flex; align-items: center; gap: 16px; color: #fff;
+          font-family: 'Gmarket'; font-weight: 700; font-size: 36px; transform-origin: left center;
+          box-shadow: 0 8px 24px rgba(11,29,63,.25); }
+  #step .num { width: 48px; height: 48px; border-radius: 24px; background: var(--yellow); color: var(--navy);
+               display: grid; place-items: center; font-size: 28px; padding-top: 3px; box-sizing: border-box; }
+  #tag { position: absolute; left: 58px; top: 128px; height: 50px; padding: 0 22px; border-radius: 12px;
+         background: var(--yellow); color: var(--navy); font-weight: 800; font-size: 28px;
+         display: flex; align-items: center; transform-origin: left center; box-shadow: 0 6px 18px rgba(0,0,0,.12); }
+
+  /* 콜드오픈 헤드라인 */
+  #headline { position: absolute; left: 0; right: 0; top: 0; padding: 30px 0 34px; text-align: center;
+              background: linear-gradient(rgba(11,29,63,.82), rgba(11,29,63,.55) 70%, rgba(11,29,63,0)); color: #fff; }
+  #headline .l1 { font-family: 'Gmarket'; font-weight: 700; font-size: 44px; letter-spacing: -0.5px; }
+  #headline .l2 { margin-top: 10px; font-family: 'Gmarket'; font-weight: 700; font-size: 58px; letter-spacing: -1px; }
+  #headline em { font-style: normal; color: var(--yellow); }
+
+  /* 사진 입력 카드 + 코드 패널 */
+  #photoCard { position: absolute; left: 250px; top: 170px; width: 520px; padding: 24px 24px 26px; background: #fff;
+               border-radius: 22px; box-shadow: 0 24px 60px rgba(40,25,10,.22); }
+  #photoCard img { width: 520px; height: 600px; object-fit: cover; object-position: 50% 20%; border-radius: 12px; display: block; }
+  #photoCard .cap { margin-top: 16px; font-family: 'Gmarket'; font-weight: 700; font-size: 30px; color: var(--ink); text-align: center; }
+  #scanBox { position: absolute; left: 24px; top: 24px; width: 520px; height: 600px; overflow: hidden; border-radius: 12px; pointer-events: none; }
+  #scanBox .bar { position: absolute; left: 0; width: 100%; height: 5px; background: #7FE3FF;
+                  box-shadow: 0 0 16px 5px rgba(127,227,255,.8); }
+  #scanBox .grid { position: absolute; left: 0; top: 0; width: 100%;
+                   background-image: linear-gradient(rgba(127,227,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(127,227,255,.55) 1px, transparent 1px);
+                   background-size: 26px 26px; mix-blend-mode: screen; }
+  #code { position: absolute; left: 840px; top: 250px; width: 960px; padding: 30px 36px; border-radius: 22px; box-sizing: border-box;
+          background: #0E1830; color: #DCE6FF; font-family: 'JBM', monospace; font-size: 24px; line-height: 1.6;
+          box-shadow: 0 24px 60px rgba(11,29,63,.35); white-space: pre; }
+  #code .hd { font-family: 'SUIT'; font-weight: 800; font-size: 24px; color: var(--yellow); margin-bottom: 14px; }
+  #code .k { color: #FFD23F; } #code .s { color: #9BE7A8; } #code .c { color: #7F8DB0; } #code .n { color: #FF9BC8; }
+  #code .cur { display: inline-block; width: 14px; height: 30px; background: var(--yellow); vertical-align: -6px; }
+
+  /* 포즈 선반 */
+  #shelf { position: absolute; right: 54px; top: 150px; width: 260px; padding: 16px; border-radius: 24px;
+           background: rgba(255,255,255,.88); box-shadow: 0 20px 50px rgba(40,25,10,.18); }
+  #shelf .hd { font-family: 'Gmarket'; font-weight: 700; font-size: 26px; color: var(--ink); margin: 4px 6px 12px; }
+  #shelf .it { display: flex; align-items: center; gap: 14px; padding: 8px; border-radius: 16px; margin-bottom: 6px;
+               border: 4px solid transparent; }
+  #shelf .it img { width: 96px; height: 96px; border-radius: 12px; object-fit: cover; background: #EEE6D9; }
+  #shelf .it span { font-family: 'Gmarket'; font-weight: 700; font-size: 28px; color: #4A5470; }
+  #shelf .it.on { border-color: var(--yellow); background: #FFF6D2; }
+  #shelf .it.on span { color: var(--navy); }
+  #cursor { position: absolute; width: 46px; height: 46px; pointer-events: none; }
+  #cursor svg { width: 46px; height: 46px; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+  #ripple { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%;
+            border: 5px solid var(--yellow); opacity: 0; }
+
+  /* 말풍선 */
+  #bubble { position: absolute; padding: 14px 24px; border-radius: 26px; background: #fff; color: var(--ink);
+            font-family: 'Gmarket'; font-weight: 700; font-size: 36px; box-shadow: 0 12px 30px rgba(0,0,0,.15);
+            transform-origin: 20% 100%; }
+  #bubble::after { content: ''; position: absolute; left: 34px; bottom: -16px; border: 12px solid transparent; border-top: 18px solid #fff; }
+
+  /* 엔드카드 */
+  #endCard { position: absolute; left: 120px; top: 150px; width: 820px; padding: 46px 50px 44px; border-radius: 30px;
+             background: #fff; box-shadow: 0 30px 80px rgba(40,25,10,.22); }
+  #endCard .t { font-family: 'Gmarket'; font-weight: 700; font-size: 64px; color: var(--ink); letter-spacing: -1.5px; }
+  #endCard .t b { color: #E8A500; }
+  #endCard .st { margin-top: 10px; font-size: 30px; font-weight: 700; color: #4A5470; }
+  #endCard .row { display: flex; gap: 18px; margin-top: 30px; }
+  #endCard .row div { flex: 1; text-align: center; font-family: 'Gmarket'; font-weight: 700; font-size: 24px; color: #4A5470; }
+  #endCard .row img { width: 100%; height: 190px; object-fit: cover; border-radius: 16px; background: #EEE6D9; display: block; margin-bottom: 10px; }
+  #endCard .pill { display: inline-block; margin-top: 30px; padding: 12px 22px; border-radius: 14px; background: var(--yellow);
+                   color: var(--navy); font-weight: 800; font-size: 30px; }
+  #endCard .who { margin-top: 22px; font-size: 26px; font-weight: 700; color: #6B7591; }
+
+  /* 공공AX 영상 자막 */
+  #cap { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); max-width: 1500px; padding: 18px 36px;
+         border-radius: 20px; background: rgba(11,29,63,.86); color: #fff; font-family: 'Gmarket'; font-weight: 700;
+         font-size: 46px; letter-spacing: -0.5px; text-align: center; white-space: nowrap; box-shadow: 0 14px 40px rgba(0,0,0,.25); }
+  #cap em { font-style: normal; color: var(--yellow); }
+  #cap small { display: block; margin-top: 6px; font-family: 'SUIT'; font-weight: 700; font-size: 26px; color: #B9C6E6; letter-spacing: 0; }
+  #chapter { position: absolute; left: 52px; top: 44px; display: flex; align-items: center; gap: 14px; }
+  #chapter .no { height: 60px; padding: 0 22px; border-radius: 30px; background: var(--yellow); color: var(--navy);
+                 font-family: 'Gmarket'; font-weight: 700; font-size: 30px; display: flex; align-items: center; }
+  #chapter .tt { height: 60px; padding: 0 26px; border-radius: 30px; background: rgba(11,29,63,.86); color: #fff;
+                 font-family: 'Gmarket'; font-weight: 700; font-size: 32px; display: flex; align-items: center; }
+  #title { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #fff; }
+  #title .k { font-family: 'Gmarket'; font-weight: 700; font-size: 40px; color: var(--yellow); letter-spacing: 2px; }
+  #title .m { margin-top: 14px; font-family: 'Gmarket'; font-weight: 700; font-size: 96px; letter-spacing: -2px;
+              text-shadow: 0 10px 40px rgba(0,0,0,.45); }
+  #title .s { margin-top: 18px; font-size: 34px; font-weight: 700; color: #DDE6FF; text-shadow: 0 4px 20px rgba(0,0,0,.5); }
+  #chip { position: absolute; right: 54px; top: 44px; padding: 14px 22px; border-radius: 14px; background: rgba(14,24,48,.9);
+          color: #DCE6FF; font-family: 'JBM', monospace; font-size: 24px; white-space: pre; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  #chip .k { color: #FFD23F; } #chip .c { color: #7F8DB0; } #chip .s { color: #9BE7A8; }
+  #chip .hd { font-family: 'SUIT'; font-weight: 800; font-size: 18px; color: #7F8DB0; margin-bottom: 6px; letter-spacing: .5px; }
+  /* 나레이션 자막(영상 자막 확정 스펙) */
+  #sub { position: absolute; left: 50%; bottom: 70px; max-width: 1500px; padding: 14px 32px; box-sizing: border-box;
+         border-radius: 18px; background: rgba(17,20,26,.74); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+         border: 1px solid rgba(255,255,255,.12); color: #fff; font-family: 'Pretendard', 'SUIT', sans-serif; font-weight: 600;
+         font-size: 43px; line-height: 1.42; letter-spacing: -0.02em; word-break: keep-all; text-align: center; width: max-content; }
+  #counter { position: absolute; right: 70px; top: 50px; padding: 18px 34px; border-radius: 26px; background: rgba(11,29,63,.82);
+             color: #fff; font-family: 'Gmarket'; font-weight: 700; text-align: right; transform-origin: right top;
+             box-shadow: 0 16px 40px rgba(0,0,0,.3); }
+  #counter .lb { font-size: 26px; color: #B9C6E6; }
+  #counter .v { font-size: 72px; letter-spacing: -1px; }
+  #counter .v i { font-style: normal; color: var(--yellow); margin-right: 10px; }
+  #counter .pulse { position: absolute; inset: -6px; border-radius: 30px; border: 5px solid var(--yellow); opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="L0" class="layer"><img id="L1" class="layer"><img id="L2" class="layer"><img id="L3" class="layer">
+  <div id="scan" class="hide"></div>
+  <div id="vignette"></div>
+
+  <div id="photoCard" class="hide"><img src="../ref/photo.jpg" onerror="this.onerror=null;this.src='../build/tex/card.png'"><div id="scanBox"><div class="grid"></div><div class="bar"></div></div>
+    <div class="cap">광진구청 류승인 주무관</div></div>
+  <div id="code" class="hide"></div>
+
+  <div id="shelf" class="hide"><div class="hd">포즈 라이브러리</div></div>
+  <div id="cursor" class="hide"><svg viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 15 L11.5 22 L14.5 20.7 L11.6 14 L18 14 Z" fill="#fff" stroke="#0B1D3F" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+  <div id="ripple"></div>
+  <div id="bubble" class="hide"></div>
+
+  <div id="endCard" class="hide">
+    <div class="t">Claude Code <b>×</b> Blender</div>
+    <div class="st">사진 한 장 → 모델 → 리그 → 포즈 → 애니메이션</div>
+    <div class="row"><div><img id="ecM">모델</div><div><img id="ecR">리그</div><div><img id="ecA">애니메이션</div></div>
+    <div class="pill" id="ecLines">Blender Python 3,822줄</div>
+    <div class="who">광진구청 류승인 주무관 · 공공AX FDE · @chris_gomdori</div>
+  </div>
+
+  <div id="step" class="hide"><span class="num">1</span><span class="name">모델</span></div>
+  <div id="tag" class="hide"></div>
+  <div id="headline" class="hide"><div class="l1">Claude Code가 만들었다</div>
+    <div class="l2">사진 한 장 → <em>리깅</em>·<em>애니메이션</em>까지 된 캐릭터</div></div>
+  <div id="chapter" class="hide"><div class="no"></div><div class="tt"></div></div>
+  <div id="cap" class="hide"></div>
+  <div id="sub" class="hide"></div>
+  <div id="chip" class="hide"></div>
+  <div id="counter" class="hide"><div class="pulse"></div><div class="lb">GitHub 별</div><div class="v"><i>★</i><b>0</b></div></div>
+  <div id="title" class="hide"><div><div class="k"></div><div class="m"></div><div class="s"></div></div></div>
+  <div id="flash"></div>
+</div>
+<script src="narr_A.js"></script>
+<script src="engine.js"></script>
+</body>
+</html>
