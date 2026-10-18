@@ -41,18 +41,26 @@ blender -b build/rig.blend -P scripts/shot.py -- a10_cast --preview --step 3   #
 
 ```bash
 scripts/render_parallel.sh 4                               # 1080p 전 샷을 4갈래로 동시에 렌더 (M4에서 약 1시간, 두 번째 인자 32면 절반)
-.venv/bin/python audio/narr_A.py 1.2                        # 내레이션 생성 + 자막 큐(comp/narr_A.js) — ElevenLabs 키 필요, 없으면 건너뛰기
+.venv/bin/python audio/narr.py A ; .venv/bin/python audio/narr.py B   # 내레이션 + 자막 큐(comp/narr_A.js·narr_B.js) — ElevenLabs 키 필요, 없으면 건너뛰기
 .venv/bin/python audio/score.py A ; .venv/bin/python audio/score.py B   # 음악·효과음(내레이션 덕킹)
 scripts/assemble.sh A ; scripts/assemble.sh B              # 라벨·자막 합성 + 소리 → out/A.mp4, out/B.mp4 (+ 올리기용 *_web.mp4)
 ```
 
-음악은 macOS Logic/GarageBand의 스타인웨이 샘플·잔향이 있으면 그걸 쓰고, 없으면 합성 피아노·합성 잔향으로 대신합니다. 내레이션 단계를 건너뛰면 음악만 깔립니다(자막은 `comp/narr_A.js` 대로 나와요).
+### 웹에서 돌려 보기
+
+```bash
+blender -b build/rig.blend -P scripts/export_web.py      # 웹용 GLB(동작 6개 + 포즈 8개, IK·스프링은 키로 구움) → out/web/fde_wizard.glb
+```
+
+three.js `GLTFLoader` 로 불러 `AnimationMixer` 로 동작 이름(`idle`·`wave`·`bow`·`cast`·`tada`·`walk`, 포즈는 `pose_` 접두)을 틀면 됩니다. 볼터치·셔츠 V·넥타이 점 같은 무늬는 블렌더 셰이더라 글TF 로 안 넘어가니 웹에서 다시 그려야 해요(값은 같이 나오는 `out/web/shader.json`). 완성본은 [chris.gomdori.app/wizard](https://chris.gomdori.app/wizard) 에서 직접 돌려 볼 수 있습니다.
+
+음악은 macOS Logic/GarageBand의 스타인웨이 샘플·잔향이 있으면 그걸 쓰고, 없으면 합성 피아노·합성 잔향으로 대신합니다. 내레이션 단계를 건너뛰면 음악만 깔립니다(자막은 저장소에 들어 있는 `comp/narr_A.js`·`narr_B.js` 대로 나와요).
 
 ## 내 캐릭터로 바꾸기
 
 1. `ref/photo.jpg` 에 본인 사진, `scripts/params.py` 의 `PROFILE` 에 소속·이름
 2. Claude Code에 `docs/PROMPTS.md` 의 「내 캐릭터로 바꾸기」 프롬프트를 붙여 넣기
-3. 캐릭터 손잡이는 전부 `scripts/params.py` 에 있어요. 영상 속 문구(자막·내레이션·엔드카드·이름)는 `comp/engine.js`, `comp/comp.html`, `audio/narr_A.py` 에서 바꿉니다
+3. 캐릭터 손잡이는 전부 `scripts/params.py` 에 있어요. 영상 속 문구(자막·내레이션·엔드카드·이름)는 `comp/engine.js`, `comp/comp.html`, `audio/narr.py` 에서 바꿉니다
 
 | 손잡이 | 바뀌는 것 |
 |---|---|
@@ -73,6 +81,7 @@ scripts/assemble.sh A ; scripts/assemble.sh B              # 라벨·자막 합�
 | `scripts/fx.py`, `set_props.py`, `set_ax.py`, `stage.py` | 반짝이·한글 룬 마법진·펑 연기 / 소품 / 노을 하늘·떠 있는 섬·구청 / 조명·카메라·블룸 |
 | `comp/` | 합성(HTML + Playwright): 단계 라벨, 코드 칩, 포즈 선반, 자막, 카운터, 엔드카드 |
 | `audio/` | 120BPM 작곡 + 효과음 큐 + 내레이션 생성·자리 맞춤 |
+| `scripts/export_web.py` | 웹용 GLB 내보내기(서브디비전 1단, 동작·포즈 액션, 곰돌이는 따로 움직이는 노드) |
 | `scripts/qa_tiles.py`, `teaser.py`, `hero.py`, `thumbs.py` | 전 프레임 검수 타일, 예고 이미지, 대표 이미지, 엔드카드 썸네일 |
 | `docs/PROMPTS.md` | 따라 하기 프롬프트와 실제로 쓴 요청들 |
 | `docs/PITFALLS.md` | 삽질 기록 |

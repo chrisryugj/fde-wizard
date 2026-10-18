@@ -318,6 +318,8 @@ def master(mus, sfx, out, total_frames, nar=None):
     n = int(total_frames / FPS * SR)
     m = n + int(0.2 * SR)
     fade = int(0.8 * SR)
+    if nar is not None:  # 마지막 말이 페이드에 먹히지 않게
+        fade = int(min(0.8, max(0.3, m / SR - max(e for _, e in nar[1]))) * SR)
     if nar is None:
         mix = (0.62 * mus.x + 0.95 * sfx.x + 0.16 * wet)[:m]
         mix[-fade:] *= np.linspace(1, 0, fade)[:, None]
@@ -371,8 +373,8 @@ if __name__ == '__main__':
     total = 960 if v == 'A' else 1170
     mus, sfx = Bus(total / FPS), Bus(total / FPS)
     nar = None
-    cues_json = os.path.join(ROOT, 'audio', 'out', 'narrA', 'cues.json')
-    if v == 'A' and os.path.exists(cues_json):  # 내레이션이 없으면(narr_A.py 안 돌림) 음악만
+    cues_json = os.path.join(ROOT, 'audio', 'out', f'narr{v}', 'cues.json')
+    if os.path.exists(cues_json):  # 내레이션이 없으면(narr.py 안 돌림) 음악만
         nar = narration(cues_json, total / FPS)
         QUIET[:] = nar[1]
     (cues_a if v == 'A' else cues_b)(mus, sfx)

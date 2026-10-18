@@ -259,6 +259,13 @@ const B = {
   cuts: [90, 330, 570, 810, 1020],
 };
 
+function narrCaps(cues) {  // [시작 초, 말 길이, 자막 html, 작은 줄] → [시작 프레임, 끝 프레임, html, 작은 줄]
+  return cues.map(([st, d, html, small], i) => {
+    const nx = i + 1 < cues.length ? cues[i + 1][0] : 1e9;
+    return [Math.round((st - 0.05) * 30), Math.round(Math.min(st + d + 0.35, nx - 0.08) * 30), html, small];
+  }).filter(x => x[2]);
+}
+
 function drawB(f) {
   let start = 0, seg = null;
   for (const s of B.segs) { if (f < start + s.dur) { seg = s; break; } start += s.dur; }
@@ -279,8 +286,8 @@ function drawB(f) {
     $('chapter').style.transform = `translateX(${(1 - p) * -60}px)`;
     $('chapter').style.opacity = prog(f, ch[0], ch[0] + 4);
   }
-  // 자막
-  const c = B.caps.find(x => f >= x[0] && f < x[1]);
+  // 자막: 내레이션이 있으면 말하는 동안만, 없으면 B.caps
+  const c = (window.NARR_B ? narrCaps(window.NARR_B) : B.caps).find(x => f >= x[0] && f < x[1]);
   show('cap', !!c);
   if (c) {
     $('cap').innerHTML = c[2] + (c[3] ? `<small>${c[3]}</small>` : '');
