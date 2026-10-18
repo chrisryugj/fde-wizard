@@ -109,7 +109,7 @@ blush = node_default('skin_face', 'ShaderNodeVectorMath')  # 볼터치 중심(SU
 shader = {
     'skin': C['skin'], 'blush': C['blush'], 'scalp': C['scalp'],
     'blush_center': list(blush.inputs[1].default_value), 'blush_r': P.FACE['blush_r'], 'blush_k': 0.55,
-    'scalp_tilt': 0.35, 'scalp_from': 1.76, 'scalp_to': 1.80,
+    'scalp_tilt': 0.35, 'scalp_from': P.HEAD['scalp_z'][0], 'scalp_to': P.HEAD['scalp_z'][1],
     'suit': C['suit'], 'shirt': C['shirt'], 'v_bottom': P.BODY['v_bottom'], 'v_slope': P.BODY['v_slope'],
     'tie': C['tie'], 'tie_dot': C['tie_dot'], 'tie_gap': P.BODY['tie_dot_gap'],
     'eye': C['eye'], 'iris': C['iris'],

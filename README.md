@@ -82,6 +82,7 @@ three.js `GLTFLoader` 로 불러 `AnimationMixer` 로 동작 이름(`idle`·`wav
 | `comp/` | 합성(HTML + Playwright): 단계 라벨, 코드 칩, 포즈 선반, 자막, 카운터, 엔드카드 |
 | `audio/` | 120BPM 작곡 + 효과음 큐 + 내레이션 생성·자리 맞춤 |
 | `scripts/export_web.py` | 웹용 GLB 내보내기(서브디비전 1단, 동작·포즈 액션, 곰돌이는 따로 움직이는 노드) |
+| `scripts/hat_check.py` | 모자 관통 검사(머리 볼륨·모자 숫자를 바꾸면 돌려서 max ≤ 0 확인) |
 | `scripts/qa_tiles.py`, `teaser.py`, `hero.py`, `thumbs.py` | 전 프레임 검수 타일, 예고 이미지, 대표 이미지, 엔드카드 썸네일 |
 | `docs/PROMPTS.md` | 따라 하기 프롬프트와 실제로 쓴 요청들 |
 | `docs/PITFALLS.md` | 삽질 기록 |

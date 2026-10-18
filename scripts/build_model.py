@@ -21,7 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def materials():
     M = {}
     M['skin'] = principled('skin', C['skin'], rough=0.55, sss=0.12, spec=0.3)
-    M['hair'] = principled('hair', C['hair'], rough=0.55, spec=0.3)
+    M['hair'] = principled('hair', C['hair'], rough=0.42, spec=0.35)   # 웨이브 마루에 하이라이트가 맺혀 물결이 읽히게
     M['brow'] = principled('brow', C['brow'], rough=0.6)
     M['mouth'] = principled('mouth', C['mouth'], rough=0.5)
     M['eye_hi'] = emission('eye_hi', C['eye_hi'], 2.5)
@@ -59,8 +59,7 @@ def face_material(blush_center):
     nt.links.new(sep.outputs['Z'], tilt.inputs[2])
     sc = node(nt, 'ShaderNodeMapRange', interpolation_type='SMOOTHSTEP')
     nt.links.new(tilt.outputs[0], sc.inputs['Value'])
-    sc.inputs['From Min'].default_value = 1.76
-    sc.inputs['From Max'].default_value = 1.80
+    sc.inputs['From Min'].default_value, sc.inputs['From Max'].default_value = P.HEAD['scalp_z']
     col = mix_color(nt, sc.outputs['Result'], col, (*hex2lin(C['scalp']), 1))
     nt.links.new(col, nt.nodes['Principled BSDF'].inputs['Base Color'])
     return m
@@ -76,9 +75,9 @@ def head_shape(q, p):
     return (x, y, z)
 
 
-HAIRLINE = [  # |방위각|(rad) → 머리선 높이(단위 구 z). 0=정면, pi=뒤
-    (0.00, 0.74), (0.35, 0.70), (0.62, 0.56), (0.95, 0.30), (1.15, -0.05), (1.30, -0.22), (1.42, 0.03),
-    (1.62, 0.12), (1.85, 0.06), (2.05, -0.30), (2.60, -0.55), (3.15, -0.62)]
+HAIRLINE = [  # |방위각|(rad) → 머리선 높이(단위 구 z). 0=정면, pi/2=귀, pi=뒤. 귀 위는 짧게 쳐서 귀가 다 보이게
+    (0.00, 0.55), (0.35, 0.51), (0.62, 0.40), (0.95, 0.22), (1.15, -0.05), (1.30, 0.10), (1.42, 0.22),
+    (1.62, 0.26), (1.85, 0.18), (2.05, -0.10), (2.60, -0.45), (3.15, -0.55)]
 
 
 def interp(table, x):
@@ -93,7 +92,7 @@ def hair_shape(q, p):
     hq = Vector(head_shape(q, p))
     radial = hq.normalized()
     th = Hh['base'] + Hh['top'] * smoothstep(0.1, 0.95, p.z) + Hh['back'] * smoothstep(0.0, 0.8, p.y)
-    th += Hh['swoop_side'] * smoothstep(-0.2, 0.7, p.x) * smoothstep(0.2, 0.8, p.z)
+    th += Hh['swoop_side'] * smoothstep(-0.2, 0.7, Hh['sweep'] * p.x) * smoothstep(0.2, 0.8, p.z)   # 넘기는 쪽이 더 풍성
     hl = interp(HAIRLINE, abs(math.atan2(p.x, -p.y)))
     th -= (Hh['base'] + 0.06) * smoothstep(hl + 0.03, hl - 0.07, p.z)
     return hq + radial * th
@@ -134,7 +133,7 @@ def build_head(c, M):
         set_mat(eye, M['eye'])
         parts[f'eye.{tag}'] = eye
         # 하이라이트 두 개(큰 것 위 바깥, 작은 것 아래 안쪽)
-        for i, (hx, hz, s) in enumerate(((0.32, 0.36, 0.30), (-0.36, 0.04, 0.12))):
+        for i, (hx, hz, s) in enumerate(((0.32, 0.36, F['hi_s'][0]), (-0.36, 0.04, F['hi_s'][1]))):
             hw, hh, hd = F['eye_w'] / 2, F['eye_h'] / 2, F['eye_d'] / 2
             lx, lz = hx * hw * side, hz * hh
             ly = -hd * math.sqrt(max(0.0, 1 - (lx / hw) ** 2 - (lz / hh) ** 2)) - 0.002
@@ -153,7 +152,7 @@ def build_head(c, M):
             if ax <= w / 2 * F['lid_fit']:
                 lz = h / 2 * F['lid_fit'] * math.sqrt(max(0.0, 1 - (ax / (w / 2 * F['lid_fit'])) ** 2)) + 0.003
             else:
-                lz = 0.003 + (ax - w / 2 * F['lid_fit']) * 0.08
+                lz = 0.003 + (ax - w / 2 * F['lid_fit']) * F['lid_flick']   # 바깥 끝 날개
             wp = eye.matrix_world @ Vector((side * lx, -F['eye_d'], lz))
             loc2, nor2 = hit(tree, (wp.x, -2.0, wp.z), (0, 1, 0))
             lid.append(loc2 + nor2 * 0.003)
@@ -192,11 +191,12 @@ def build_head(c, M):
         set_mat(hap, M['brow'])
         parts[f'eye_happy.{tag}'] = hap
     loc, nor = hit(tree, (0, -2, F['mouth_z'] - 0.012), (0, 1, 0))
-    mo = ellipsoid('mouth_open', (0, 0, 0), (0.046, 0.016, 0.036), c, cuts=3,
-                   fn=lambda q, p: (q.x, q.y, min(q.z, 0.006 + 0.004 * (1 - (q.x / 0.046) ** 2))))
+    ow = F['mouth_w'] * 0.42   # 벌린 입 폭은 다문 입에 맞춰
+    mo = ellipsoid('mouth_open', (0, 0, 0), (ow, 0.016, 0.036), c, cuts=3,
+                   fn=lambda q, p: (q.x, q.y, min(q.z, 0.006 + 0.004 * (1 - (q.x / ow) ** 2))))
     place(mo, loc, nor, push=-0.004)
     set_mat(mo, principled('mouth_in', C['mouth_in'], rough=0.5))
-    tg = ellipsoid('tongue', (0, 0, 0), (0.024, 0.012, 0.012), c, cuts=2)
+    tg = ellipsoid('tongue', (0, 0, 0), (ow * 0.52, 0.012, 0.012), c, cuts=2)
     tg.parent = mo
     tg.location = (0, -0.008, -0.022)
     set_mat(tg, principled('tongue', C['tongue'], rough=0.45))
@@ -212,7 +212,7 @@ def build_head(c, M):
     # 코
     loc, nor = hit(tree, (0, -2, F['nose_z']), (0, 1, 0))
     nose = ellipsoid('nose', (0, 0, 0), F['nose'], c, cuts=3)
-    place(nose, loc, nor, push=-F['nose'][1] * 0.35)
+    place(nose, loc, nor, push=-F['nose'][1] * F['nose_push'])
     set_mat(nose, M['skin'])
     parts['nose'] = nose
     return parts

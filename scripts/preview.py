@@ -11,10 +11,18 @@ import stage  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 mode = argv[0] if argv else 'head'
-views = argv[1:] or ['front', 'q34', 'side', 'back', 'top34']
+views = [v for v in argv[1:] if v != 'nohat'] or ['front', 'q34', 'side', 'back', 'top34']
+nohat = 'nohat' in argv   # 모자를 숨기고(머리 모양 비교용) 렌더
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 build_model.build()
+for o in bpy.data.objects:   # 표정 교체 부품(눈웃음·벌린 입)은 리그에선 숨겨 두는 것: 모델만 볼 땐 감춘다
+    if o.name.startswith(('eye_happy', 'mouth_open', 'tongue')):
+        o.hide_render = True
+if nohat:
+    for o in bpy.data.objects:
+        if o.name.startswith('hat_'):
+            o.hide_render = True
 stage.render_settings(900, 900, samples=32)
 stage.world()
 stage.cyclorama()
