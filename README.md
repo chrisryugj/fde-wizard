@@ -69,6 +69,8 @@ three.js `GLTFLoader` 로 불러 `AnimationMixer` 로 동작 이름(`idle`·`wav
 | `BODY`, `CAPE`, `HAT`, `STAFF`, `BADGE` | 몸·망토·모자·지팡이·공무원증 |
 | `COLORS` | 피부·머리·정장·넥타이 도트·망토 안감 등 모든 색 |
 
+실존 인물을 닮게 만들어야 하면 부품 조합보다 이미지 → 3D 경로가 맞았어요. 순서와 밟은 함정은 `docs/PITFALLS.md` 의 「실존 인물 닮게」부터 정리해 두었습니다.
+
 ## 구성
 
 | 파일 | 하는 일 |
